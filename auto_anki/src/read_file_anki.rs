@@ -10,10 +10,11 @@ pub async fn handle_reading_from_file(file_path: String) -> Result<(), Box<dyn E
     for (word, def) in words_and_defs {
         let in_deck = check_exists_json(&word).await?;
         if !in_deck {
+            println!("Adding '{word}' as a new flashcard!");
             format_as_json(word.as_str().trim().to_string(), def.as_str().trim().to_string()).await?;
         }
         else {
-            continue;
+            println!("{word} already exists as a flashcard");
         }
     }
     Ok(())
@@ -28,25 +29,25 @@ fn read_word_file(file_path: String) -> Result<HashMap<String, String>, Box<dyn 
 
     file.read_to_string(&mut contents).expect("Could not read contents");
 
-    let list = contents.split("\n");
+    let list = contents.lines();
 
     for word in list { 
         let mut parts = word.split("-");
 
         if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
-            wordsndefs.insert(key.to_string(), value.to_string());
+            wordsndefs.insert(key.trim().to_string(), value.trim().to_string());
         }
     }
 
     return Ok(wordsndefs)
 }
 
-async fn check_exists_json(word: &String) -> Result<bool, Box<dyn Error>> {
+pub async fn check_exists_json(word: &str) -> Result<bool, Box<dyn Error>> {
     let request = json!({
         "action": "findNotes",
         "version": 6,
         "params": {
-            "query": format!("deck:words_and_phrases Front:{}", word.trim())
+            "query": format!("deck:words_and_phrases Front:\"{}\"", word.trim()),
         }
     });
     
@@ -64,7 +65,7 @@ async fn check_exists_json(word: &String) -> Result<bool, Box<dyn Error>> {
     }
 }
 
-async fn format_as_json(word: String, def: String) -> Result<(), Box<dyn Error>> {
+pub async fn format_as_json(word: String, def: String) -> Result<(), Box<dyn Error>> {
     let json = json!({
         "action": "addNote",
         "version": 6,
